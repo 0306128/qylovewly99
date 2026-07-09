@@ -2235,5 +2235,535 @@
     <script src="js/onboarding.js"></script> 
     <script src="js/listeners.js"></script>
     <script src="js/app.js"></script>
+<!-- ========================================== -->
+<!-- 🎮 游戏模块 · 直接插入版                  -->
+<!-- 不依赖任何现有JS，独立运行               -->
+<!-- ========================================== -->
+
+<style>
+  /* 游戏模块样式 */
+  .game-module-container {
+    background: var(--secondary-bg, #1a1a1e);
+    border-radius: 20px;
+    padding: 16px 16px 12px;
+    margin: 8px 12px 12px;
+    border: 1px solid var(--border-color, #2a2a2e);
+    box-shadow: 0 6px 24px rgba(0,0,0,0.3);
+  }
+  .game-module-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+  .game-module-header span {
+    color: var(--text-secondary, #888);
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+  }
+  .game-module-header button {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary, #888);
+    font-size: 16px;
+    cursor: pointer;
+    padding: 0 4px;
+  }
+  .game-tabs {
+    display: flex;
+    gap: 6px;
+    border-bottom: 1px solid var(--border-color, #2a2a2e);
+    padding-bottom: 8px;
+    margin-bottom: 12px;
+  }
+  .game-tab-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary, #888);
+    font-size: 13px;
+    padding: 4px 12px;
+    cursor: pointer;
+    border-radius: 20px;
+    transition: 0.2s;
+  }
+  .game-tab-btn.active {
+    color: var(--accent-color, #c5a47e);
+    font-weight: 600;
+    background: rgba(197,164,126,0.08);
+  }
+  .game-panel {
+    display: none;
+  }
+  .game-panel.active {
+    display: block;
+  }
+  .game-rps-btns {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+  }
+  .game-rps-btn {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    border: 2px solid var(--border-color, #2a2a2e);
+    background: var(--primary-bg, #121217);
+    color: var(--text-primary);
+    font-size: 26px;
+    cursor: pointer;
+    transition: 0.2s;
+  }
+  .game-rps-btn:hover {
+    border-color: var(--accent-color, #c5a47e);
+    transform: scale(1.05);
+  }
+  .game-result {
+    text-align: center;
+    margin-top: 10px;
+    font-size: 14px;
+    color: var(--accent-color, #c5a47e);
+    min-height: 24px;
+  }
+  .game-bomb-row {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .game-bomb-input {
+    width: 100px;
+    padding: 8px 12px;
+    border-radius: 20px;
+    border: 1px solid var(--border-color, #2a2a2e);
+    background: var(--primary-bg, #121217);
+    color: var(--text-primary);
+    outline: none;
+    font-size: 14px;
+  }
+  .game-btn {
+    padding: 8px 18px;
+    border-radius: 20px;
+    border: none;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 13px;
+    transition: 0.2s;
+  }
+  .game-btn-primary {
+    background: var(--accent-color, #c5a47e);
+    color: #fff;
+  }
+  .game-btn-primary:hover {
+    opacity: 0.85;
+  }
+  .game-btn-secondary {
+    background: transparent;
+    border: 1px solid var(--border-color, #2a2a2e);
+    color: var(--text-secondary, #888);
+  }
+  .game-btn-secondary:hover {
+    background: rgba(255,255,255,0.05);
+  }
+  .game-goban-board {
+    display: grid;
+    grid-template-columns: repeat(15, 1fr);
+    gap: 1px;
+    max-width: 300px;
+    margin: 0 auto;
+    background: var(--primary-bg, #121217);
+    padding: 8px;
+    border-radius: 12px;
+  }
+  .game-goban-cell {
+    width: 100%;
+    aspect-ratio: 1;
+    background: #1e1e24;
+    border-radius: 2px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    transition: 0.1s;
+  }
+  .game-goban-cell:hover {
+    background: #2a2a34;
+  }
+  .game-goban-cell.player {
+    background: #2a2a34;
+  }
+  .game-goban-info {
+    text-align: center;
+    color: var(--text-secondary, #888);
+    font-size: 13px;
+    margin-bottom: 8px;
+  }
+  .game-goban-info span {
+    color: var(--accent-color, #c5a47e);
+    font-weight: 600;
+  }
+</style>
+
+<div class="game-module-container" id="gameModule">
+  <div class="game-module-header">
+    <span>🎮 小游戏</span>
+    <button id="gameModuleClose">✕</button>
+  </div>
+
+  <div class="game-tabs">
+    <button class="game-tab-btn active" data-game="rps">✊ 猜拳</button>
+    <button class="game-tab-btn" data-game="bomb">💣 数字炸弹</button>
+    <button class="game-tab-btn" data-game="goban">⚫ 五子棋</button>
+  </div>
+
+  <!-- 猜拳 -->
+  <div class="game-panel active" id="gamePanelRps">
+    <div style="text-align:center;color:var(--text-secondary);font-size:13px;margin-bottom:10px;">选一个，看看谁会赢</div>
+    <div class="game-rps-btns">
+      <button class="game-rps-btn" data-move="rock">✊</button>
+      <button class="game-rps-btn" data-move="scissors">✌️</button>
+      <button class="game-rps-btn" data-move="paper">🖐️</button>
+    </div>
+    <div class="game-result" id="rpsResult"></div>
+  </div>
+
+  <!-- 数字炸弹 -->
+  <div class="game-panel" id="gamePanelBomb">
+    <div style="text-align:center;color:var(--text-secondary);font-size:13px;margin-bottom:6px;">
+      范围：<span id="bombRange" style="color:var(--accent-color,#c5a47e);font-weight:600;">1 ~ 100</span>
+    </div>
+    <div class="game-bomb-row">
+      <input class="game-bomb-input" id="bombInput" type="number" min="1" max="100" placeholder="猜数字">
+      <button class="game-btn game-btn-primary" id="bombGuessBtn">猜</button>
+      <button class="game-btn game-btn-secondary" id="bombResetBtn">重置</button>
+    </div>
+    <div class="game-result" id="bombResult"></div>
+  </div>
+
+  <!-- 五子棋 -->
+  <div class="game-panel" id="gamePanelGoban">
+    <div class="game-goban-info">
+      <span id="gobanTurn">你的回合</span>
+      <button class="game-btn game-btn-secondary" id="gobanResetBtn" style="margin-left:10px;padding:4px 12px;font-size:11px;">重开</button>
+    </div>
+    <div class="game-goban-board" id="gobanBoard"></div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// 🎮 游戏模块 · 独立脚本（不依赖任何外部函数）
+// ============================================================
+(function() {
+  'use strict';
+
+  // ---- 关闭模块 ----
+  const closeBtn = document.getElementById('gameModuleClose');
+  if (closeBtn) {
+    closeBtn.addEventListener('click', function() {
+      const el = document.getElementById('gameModule');
+      if (el) el.style.display = 'none';
+    });
+  }
+
+  // ---- Tab切换 ----
+  const tabs = document.querySelectorAll('.game-tab-btn');
+  const panels = {
+    rps: document.getElementById('gamePanelRps'),
+    bomb: document.getElementById('gamePanelBomb'),
+    goban: document.getElementById('gamePanelGoban')
+  };
+
+  tabs.forEach(tab => {
+    tab.addEventListener('click', function() {
+      tabs.forEach(t => t.classList.remove('active'));
+      this.classList.add('active');
+      Object.keys(panels).forEach(key => {
+        panels[key].classList.toggle('active', key === this.dataset.game);
+      });
+    });
+  });
+
+  // ---- 猜拳 ----
+  const rpsMap = { rock: '✊', scissors: '✌️', paper: '🖐️' };
+  const rpsBeats = { rock: 'scissors', scissors: 'paper', paper: 'rock' };
+  const rpsResult = document.getElementById('rpsResult');
+
+  document.querySelectorAll('.game-rps-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const player = this.dataset.move;
+      const moves = ['rock', 'scissors', 'paper'];
+      const ai = moves[Math.floor(Math.random() * moves.length)];
+      const pEmoji = rpsMap[player];
+      const aEmoji = rpsMap[ai];
+      let result = '';
+      if (player === ai) result = '🤝 平局！';
+      else if (rpsBeats[player] === ai) result = '🎉 你赢了！';
+      else result = '😅 他赢了...';
+      rpsResult.textContent = `${pEmoji} vs ${aEmoji}  →  ${result}`;
+      // 同时写入聊天框（如果存在）
+      const chatBox = document.getElementById('chat-container') || document.getElementById('chatBox');
+      if (chatBox) {
+        const msg = document.createElement('div');
+        msg.className = 'message system';
+        msg.style.cssText = 'text-align:center;font-size:12px;color:var(--text-secondary);padding:4px 0;opacity:0.7;background:transparent;';
+        msg.textContent = `✊ 猜拳：你出${pEmoji}，他出${aEmoji}，${result}`;
+        chatBox.appendChild(msg);
+        chatBox.scrollTop = chatBox.scrollHeight;
+      }
+    });
+  });
+
+  // ---- 数字炸弹 ----
+  let bombNum = Math.floor(Math.random() * 100) + 1;
+  let bombMin = 1, bombMax = 100;
+  const bombInput = document.getElementById('bombInput');
+  const bombGuessBtn = document.getElementById('bombGuessBtn');
+  const bombResetBtn = document.getElementById('bombResetBtn');
+  const bombRange = document.getElementById('bombRange');
+  const bombResult = document.getElementById('bombResult');
+
+  function resetBomb() {
+    bombNum = Math.floor(Math.random() * 100) + 1;
+    bombMin = 1; bombMax = 100;
+    bombRange.textContent = '1 ~ 100';
+    bombResult.textContent = '新的一局，开始猜吧！';
+    bombInput.value = '';
+    bombInput.disabled = false;
+    bombGuessBtn.disabled = false;
+  }
+
+  if (bombGuessBtn) {
+    bombGuessBtn.addEventListener('click', function() {
+      const guess = parseInt(bombInput.value);
+      if (isNaN(guess) || guess < bombMin || guess > bombMax) {
+        bombResult.textContent = `请输入 ${bombMin}~${bombMax} 之间的数字`;
+        return;
+      }
+      if (guess === bombNum) {
+        bombResult.textContent = `💥 炸弹爆炸！数字是 ${bombNum}！你输了！`;
+        bombInput.disabled = true;
+        this.disabled = true;
+        return;
+      }
+      if (guess < bombNum) {
+        bombMin = Math.max(bombMin, guess + 1);
+        bombResult.textContent = `⬆️ 太小了，范围缩小到 ${bombMin}~${bombMax}`;
+      } else {
+        bombMax = Math.min(bombMax, guess - 1);
+        bombResult.textContent = `⬇️ 太大了，范围缩小到 ${bombMin}~${bombMax}`;
+      }
+      bombRange.textContent = `${bombMin} ~ ${bombMax}`;
+      bombInput.value = '';
+    });
+  }
+  if (bombResetBtn) bombResetBtn.addEventListener('click', resetBomb);
+
+  // ---- 五子棋 ----
+  const size = 15;
+  let board = [];
+  let turn = 'player'; // player / ai
+  let over = false;
+  const gobanBoard = document.getElementById('gobanBoard');
+  const gobanTurn = document.getElementById('gobanTurn');
+
+  function initGoban() {
+    board = Array.from({ length: size }, () => Array(size).fill(null));
+    turn = 'player';
+    over = false;
+    if (gobanTurn) gobanTurn.textContent = '你的回合';
+    renderGoban();
+  }
+
+  function renderGoban() {
+    if (!gobanBoard) return;
+    gobanBoard.innerHTML = '';
+    for (let r = 0; r < size; r++) {
+      for (let c = 0; c < size; c++) {
+        const cell = document.createElement('div');
+        cell.className = 'game-goban-cell';
+        cell.dataset.r = r;
+        cell.dataset.c = c;
+        const val = board[r][c];
+        if (val === 'player') { cell.textContent = '⚫'; cell.classList.add('player'); }
+        else if (val === 'ai') { cell.textContent = '⚪'; cell.classList.add('ai'); }
+        else if (!over && turn === 'player') {
+          cell.style.cursor = 'pointer';
+          cell.addEventListener('click', function() {
+            const rr = parseInt(this.dataset.r);
+            const cc = parseInt(this.dataset.c);
+            if (board[rr][cc] || over || turn !== 'player') return;
+            board[rr][cc] = 'player';
+            renderGoban();
+            if (checkWin(rr, cc, 'player')) {
+              if (gobanTurn) gobanTurn.textContent = '🎉 你赢了！';
+              over = true;
+              return;
+            }
+            turn = 'ai';
+            if (gobanTurn) gobanTurn.textContent = '他思考中...';
+            setTimeout(aiGobanMove, 350);
+          });
+        }
+        gobanBoard.appendChild(cell);
+      }
+    }
+  }
+
+  function aiGobanMove() {
+    if (over) return;
+    const empty = [];
+    for (let r = 0; r < size; r++) {
+      for (let c = 0; c < size; c++) {
+        if (!board[r][c]) empty.push([r, c]);
+      }
+    }
+    if (empty.length === 0) {
+      if (gobanTurn) gobanTurn.textContent = '🤝 平局！';
+      over = true;
+      return;
+    }
+    const [r, c] = empty[Math.floor(Math.random() * empty.length)];
+    board[r][c] = 'ai';
+    renderGoban();
+    if (checkWin(r, c, 'ai')) {
+      if (gobanTurn) gobanTurn.textContent = '😅 他赢了...';
+      over = true;
+      return;
+    }
+    turn = 'player';
+    if (gobanTurn) gobanTurn.textContent = '你的回合';
+  }
+
+  function checkWin(r, c, player) {
+    const dirs = [[1,0],[0,1],[1,1],[1,-1]];
+    for (const [dr, dc] of dirs) {
+      let count = 1;
+      for (const dir of [1, -1]) {
+        for (let step = 1; step < 5; step++) {
+          const nr = r + dr * step * dir;
+          const nc = c + dc * step * dir;
+          if (nr < 0 || nr >= size || nc < 0 || nc >= size) break;
+          if (board[nr][nc] === player) count++;
+          else break;
+        }
+      }
+      if (count >= 5) return true;
+    }
+    return false;
+  }
+
+  const gobanReset = document.getElementById('gobanResetBtn');
+  if (gobanReset) gobanReset.addEventListener('click', initGoban);
+
+  // 启动五子棋
+  if (gobanBoard) {
+    initGoban();
+  }
+
+  // 初始重置数字炸弹
+  resetBomb();
+
+})();
+</script>
+ <!-- ========================================== -->
+<!-- 🤖 AI 小圆钮 · 独立模块                   -->
+<!-- 放在聊天输入框左侧，适配你现有的暗色风格  -->
+<!-- ========================================== -->
+
+<!-- 在现有页面中插入小圆钮，放在输入框旁边 -->
+<script>
+(function() {
+  'use strict';
+
+  // 等待页面加载完成后再插入
+  function insertAIToggle() {
+    // 查找输入框的父容器（常见选择器）
+    const inputArea = document.querySelector('.input-area') || 
+                      document.querySelector('.input-area-wrapper') ||
+                      document.querySelector('#input-area') ||
+                      document.querySelector('.message-input')?.parentElement;
+    
+    if (!inputArea) {
+      console.warn('未找到输入区域，AI小圆钮插入失败');
+      return;
+    }
+
+    // 如果已经存在就不重复添加
+    if (document.getElementById('aiToggleBtn')) return;
+
+    // 创建小圆钮
+    const btn = document.createElement('button');
+    btn.id = 'aiToggleBtn';
+    btn.title = '切换回复模式';
+    btn.innerHTML = '📖';
+    btn.style.cssText = `
+      width: 34px; height: 34px; border-radius: 50%; 
+      border: 1.5px solid rgba(255,255,255,0.2);
+      background: transparent; color: #c5a47e; font-size: 16px; 
+      cursor: pointer; flex-shrink: 0; 
+      transition: all 0.25s ease;
+      display: inline-flex; align-items: center; justify-content: center;
+      margin-right: 4px;
+    `;
+    btn.onmouseover = function() {
+      this.style.borderColor = 'rgba(197,164,126,0.7)';
+      this.style.boxShadow = '0 0 14px rgba(197,164,126,0.2)';
+    };
+    btn.onmouseout = function() {
+      this.style.borderColor = 'rgba(255,255,255,0.2)';
+      this.style.boxShadow = 'none';
+    };
+
+    // 在输入框前面插入（找到输入框或发送按钮）
+    const input = inputArea.querySelector('input[type="text"], textarea');
+    const sendBtn = inputArea.querySelector('.send-btn, .btn-send, button[type="submit"]');
+    
+    if (input) {
+      input.parentElement.insertBefore(btn, input);
+    } else if (sendBtn) {
+      sendBtn.parentElement.insertBefore(btn, sendBtn);
+    } else {
+      inputArea.prepend(btn);
+    }
+
+    // ---- AI切换逻辑 ----
+    let aiMode = false;
+    btn.addEventListener('click', function() {
+      aiMode = !aiMode;
+      this.innerHTML = aiMode ? '✨' : '📖';
+      this.style.borderColor = aiMode ? 'rgba(197,164,126,0.8)' : 'rgba(255,255,255,0.2)';
+      this.style.boxShadow = aiMode ? '0 0 18px rgba(197,164,126,0.3)' : 'none';
+      this.title = aiMode ? 'AI模式（根据你的话实时回复）' : '字卡模式（从回复库抽取）';
+      
+      // 在聊天框显示系统提示
+      const chatBox = document.getElementById('chat-container') || document.getElementById('chatBox');
+      if (chatBox) {
+        const msg = document.createElement('div');
+        msg.className = 'message system';
+        msg.style.cssText = 'text-align:center;font-size:12px;color:var(--text-secondary);padding:6px 0;margin:4px 0;opacity:0.8;background:transparent;';
+        msg.textContent = aiMode ? '✨ 已切换到 AI 模式，他会根据你的话即时回复' : '📖 已切换到字卡模式，从回复库中抽取';
+        chatBox.appendChild(msg);
+        chatBox.scrollTop = chatBox.scrollHeight;
+      }
+
+      // 把当前模式存到全局，方便其他脚本读取
+      window._aiMode = aiMode;
+    });
+
+    console.log('✅ AI小圆钮已插入');
+  }
+
+  // 如果页面已经加载完成，立即执行；否则等待DOM加载
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', insertAIToggle);
+  } else {
+    insertAIToggle();
+  }
+
+})();
+</script>       
 </body>
 </html>
